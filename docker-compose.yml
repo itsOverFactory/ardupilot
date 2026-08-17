@@ -1,0 +1,21 @@
+services:
+  iof:
+    build:
+        context: .
+        dockerfile: ./Dockerfile
+    image: iof:Copter-4.6.3-alt
+    # command:
+    #   - /bin/bash
+    #   - -c
+    #   - |
+    #    ./Tools/autotest/sim_vehicle.py -v copter --no-rebuild \
+    #    --out=udp:0.0.0.0:14552 --sysid 69
+    command: tail -f /dev/null
+    volumes:
+      - .:/ardupilot
+    user: "1000:1000"
+    stdin_open: true
+    tty: true
+    ipc: host
+    privileged: true
+    network_mode: host
