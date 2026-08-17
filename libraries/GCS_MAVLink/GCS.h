@@ -351,6 +351,9 @@ public:
     virtual void send_rangefinder() const;
 #endif
     void send_proximity();
+#if HAL_MOUNT_ENABLED
+    void send_distance_sensor_mount() const;
+#endif
     virtual void send_nav_controller_output() const = 0;
     virtual void send_pid_tuning() = 0;
     void send_ahrs2();

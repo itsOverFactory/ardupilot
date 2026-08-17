@@ -491,7 +491,20 @@ void GCS_MAVLINK::send_distance_sensor()
 #if HAL_PROXIMITY_ENABLED
     send_proximity();
 #endif
+
+#if HAL_MOUNT_ENABLED
+    send_distance_sensor_mount();
+#endif
 }
+
+#if HAL_MOUNT_ENABLED
+// Aug 17, 2026: Keep it hardware agnostic.
+// We want to send rangefinder value from any capable mount.
+void GCS_MAVLINK::send_distance_sensor_mount() const
+{
+    //TODO
+}
+#endif  // HAL_MOUNT_ENABLED
 
 #if AP_RANGEFINDER_ENABLED
 void GCS_MAVLINK::send_rangefinder() const
