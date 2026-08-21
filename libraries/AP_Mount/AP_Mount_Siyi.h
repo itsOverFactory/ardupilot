@@ -82,6 +82,9 @@ public:
     // send camera settings message to GCS
     void send_camera_settings(mavlink_channel_t chan) const override;
 
+    // send camera capture status message to GCS
+    void send_camera_capture_status(mavlink_channel_t chan) const override;
+
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS
     void send_camera_thermal_range(mavlink_channel_t chan) const override;
@@ -350,6 +353,7 @@ private:
 
     // Configuration info received from gimbal
     GimbalConfigInfo _config_info;
+    bool _video_recording;                          // true if video is currently recording
     
     // rangefinder variables
     uint32_t _last_rangefinder_req_ms;              // system time of last request for rangefinder distance

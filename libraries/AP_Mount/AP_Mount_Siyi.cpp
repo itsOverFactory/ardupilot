@@ -494,6 +494,8 @@ void AP_Mount_Siyi::process_packet()
             (uint8_t)_config_info.mounting_dir,
             (uint8_t)_config_info.video_mode
         );
+        // TODO: Identify why the record_status byte is not correctly reporting when the camera is actively recording.
+        // _video_recording = (_config_info.record_status == RecordingStatus::ON);
         break;
     }
 
@@ -1126,6 +1128,20 @@ void AP_Mount_Siyi::send_camera_settings(mavlink_channel_t chan) const
         mode_id,            // camera mode (0:image, 1:video, 2:image survey)
         zoom_pct,           // zoomLevel float, percentage from 0 to 100, NaN if unknown
         NaNf);              // focusLevel float, percentage from 0 to 100, NaN if unknown
+}
+
+// send camera capture status message to GCS
+void AP_Mount_Siyi::send_camera_capture_status(mavlink_channel_t chan) const
+{
+    mavlink_msg_camera_capture_status_send(
+        chan,
+        AP_HAL::millis(),          // time_boot_ms
+        _video_recording ? 1 : 0,  // image_status
+        _video_recording ? 1 : 0,  // video_status
+        NaNf,                      // image_capture_interval (s)
+        0,                         // recording_time_ms (ms)
+        NaNf,                      // available_capacity (MiB)
+        0);                        // image_count
 }
 
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
