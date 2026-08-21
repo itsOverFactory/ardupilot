@@ -140,11 +140,13 @@ private:
 
     // Function Feedback Info packet info_type values
     enum class FunctionFeedbackInfo : uint8_t {
-        SUCCESS = 0,
+        PHOTO_SUCCESS = 0,
         FAILED_TO_TAKE_PHOTO = 1,
         HDR_ON = 2,
         HDR_OFF = 3,
-        FAILED_TO_RECORD_VIDEO = 4
+        FAILED_TO_RECORD_VIDEO = 4,
+        RECORDING_STARTED = 5,
+        RECORDING_STOPPED = 6,
     };
 
     // Photo Function packet func_type values
