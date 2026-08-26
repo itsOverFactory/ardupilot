@@ -297,6 +297,10 @@ public:
     // get rangefinder distance.  Returns true on success
     bool get_rangefinder_distance(uint8_t instance, float& distance_m) const;
 
+    // get rangefinder minimum and maximum distances (in cm)
+    uint32_t get_rangefinder_distance_min_cm(uint8_t instance) const;
+    uint32_t get_rangefinder_distance_max_cm(uint8_t instance) const;
+
     // enable/disable rangefinder.  Returns true on success
     bool set_rangefinder_enable(uint8_t instance, bool enable);
 

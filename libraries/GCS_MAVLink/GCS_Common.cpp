@@ -508,7 +508,7 @@ void GCS_MAVLINK::send_distance_sensor_mount() const {
   }
 
   for (uint8_t instance = 0; instance < AP_MOUNT_MAX_INSTANCES; instance++) {
-    if (!HAVE_PAYLOAD_SPACE(chan, DISTANCE_SENSOR)) {
+    if (!HAVE_PAYLOAD_SPACE(chan, DISTANCE_SENSOR_MOUNT)) {
       return;
     }
 
@@ -521,18 +521,26 @@ void GCS_MAVLINK::send_distance_sensor_mount() const {
     const bool have_attitude =
         mount->get_attitude_quaternion(instance, att_quat);
 
-    // TODO, get min, max distance values from the mount
-    const float min_distance_cm = 0.0f;       // incorrect
-    const float max_distance_cm = UINT16_MAX; // incorrect
-    const uint16_t current_distance = distance_m * 100.0f;
+    const uint32_t min_distance_cm =
+        mount->get_rangefinder_distance_min_cm(instance);
+    const uint32_t max_distance_cm =
+        mount->get_rangefinder_distance_max_cm(instance);
+    const uint32_t current_distance_cm = distance_m * 100.0f;
 
-    // Perhaps include attitude information?
-    mavlink_msg_distance_sensor_send(
+    float quat_array[4]{};
+    if (have_attitude) {
+      quat_array[0] = att_quat.q1;
+      quat_array[1] = att_quat.q2;
+      quat_array[2] = att_quat.q3;
+      quat_array[3] = att_quat.q4;
+    }
+
+    mavlink_msg_distance_sensor_mount_send(
         chan, AP_HAL::millis(), min_distance_cm, max_distance_cm,
-        current_distance, MAV_DISTANCE_SENSOR_LASER,
+        current_distance_cm, MAV_DISTANCE_SENSOR_LASER,
         MOUNT_SENSOR_ID_START + instance,
         have_attitude ? MAV_SENSOR_ROTATION_CUSTOM : MAV_SENSOR_ROTATION_NONE,
-        0, 0, 0, nullptr, 0);
+        0, 0, 0, quat_array, 0);
   }
 }
 #endif  // HAL_MOUNT_ENABLED
