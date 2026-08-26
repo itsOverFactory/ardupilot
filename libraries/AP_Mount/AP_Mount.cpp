@@ -957,6 +957,26 @@ bool AP_Mount::get_rangefinder_distance(uint8_t instance, float& distance_m) con
     return backend->get_rangefinder_distance(distance_m);
 }
 
+// get rangefinder minimum distance (in cm)
+uint32_t AP_Mount::get_rangefinder_distance_min_cm(uint8_t instance) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return 0;
+    }
+    return backend->get_rangefinder_distance_min_cm();
+}
+
+// get rangefinder maximum distance (in cm)
+uint32_t AP_Mount::get_rangefinder_distance_max_cm(uint8_t instance) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return UINT32_MAX;
+    }
+    return backend->get_rangefinder_distance_max_cm();
+}
+
 // enable/disable rangefinder.  Returns true on success
 bool AP_Mount::set_rangefinder_enable(uint8_t instance, bool enable)
 {
