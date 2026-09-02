@@ -1122,8 +1122,7 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan, uint8_t sour
         flags,                  // flags uint32_t (CAMERA_CAP_FLAGS)
         0,                      // cam_definition_version uint16_t
         cam_definition_uri,     // cam_definition_uri char[140]
-        _instance + 1,          // gimbal_device_id uint8_t
-        _instance + 1          // camera_id uint8_t
+        _instance + 1           // gimbal_device_id uint8_t
     );
     _mavlink_resend_uart(chan, &msg);
 }
