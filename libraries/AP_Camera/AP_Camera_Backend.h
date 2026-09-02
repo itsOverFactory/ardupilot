@@ -50,6 +50,9 @@ public:
     // update - should be called at 50hz
     virtual void update();
 
+    // return true if should use source compid for sending messages, false to use default compid (autopilot)
+    virtual bool uses_source_compid() const { return false; }
+
     // return true if healthy
     virtual bool healthy() const { return true; }
 
@@ -114,6 +117,9 @@ public:
 
     // send camera information message to GCS
     virtual void send_camera_information(mavlink_channel_t chan) const;
+    virtual void send_camera_information(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_information(chan);
+    }
 
 #if AP_MAVLINK_MSG_VIDEO_STREAM_INFORMATION_ENABLED
     // send video stream information message to GCS
@@ -127,6 +133,9 @@ public:
 
     // send camera settings message to GCS
     virtual void send_camera_settings(mavlink_channel_t chan) const;
+    virtual void send_camera_settings(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_settings(chan);
+    }
 
 #if AP_CAMERA_SEND_FOV_STATUS_ENABLED
     // send camera field of view status
@@ -135,6 +144,9 @@ public:
 
     // send camera capture status message to GCS
     virtual void send_camera_capture_status(mavlink_channel_t chan) const;
+    virtual void send_camera_capture_status(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_capture_status(chan);
+    }
 
 #if AP_CAMERA_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS
