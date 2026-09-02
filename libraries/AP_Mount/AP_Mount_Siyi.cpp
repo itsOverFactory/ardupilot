@@ -795,6 +795,8 @@ bool AP_Mount_Siyi::record_video(bool start_recording)
         success = send_1byte_packet(SiyiCommandId::PHOTO, (uint8_t)PhotoFunction::RECORD_VIDEO_TOGGLE);
         if (success) {
             _video_recording = start_recording;
+            // Ask AP_Camera/GCS scheduler to publish CAMERA_CAPTURE_STATUS message to indicate recording state has changed
+            GCS_SEND_MESSAGE(MSG_CAMERA_CAPTURE_STATUS);
         }
     }
 
