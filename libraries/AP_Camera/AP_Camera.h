@@ -203,6 +203,8 @@ public:
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
 
+    void send_camera_component_heartbeats(mavlink_channel_t chan);
+
 protected:
 
     // return true if vehicle mode allows trigg dist
@@ -237,6 +239,7 @@ private:
     // send camera information message to GCS
     void send_camera_information(mavlink_channel_t chan);
 
+    uint8_t camera_compid_for_instance(uint8_t instance) const;
 #if AP_MAVLINK_MSG_VIDEO_STREAM_INFORMATION_ENABLED
     void send_video_stream_information(mavlink_channel_t chan);
 #endif // AP_MAVLINK_MSG_VIDEO_STREAM_INFORMATION_ENABLED

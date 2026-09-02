@@ -78,12 +78,15 @@ public:
 
     // send camera information message to GCS
     void send_camera_information(mavlink_channel_t chan) const override;
+    void send_camera_information(mavlink_channel_t chan, uint8_t source_compid) const override;
 
     // send camera settings message to GCS
     void send_camera_settings(mavlink_channel_t chan) const override;
+    void send_camera_settings(mavlink_channel_t chan, uint8_t source_compid) const override;
 
     // send camera capture status message to GCS
     void send_camera_capture_status(mavlink_channel_t chan) const override;
+    void send_camera_capture_status(mavlink_channel_t chan, uint8_t source_compid) const override;
 
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS

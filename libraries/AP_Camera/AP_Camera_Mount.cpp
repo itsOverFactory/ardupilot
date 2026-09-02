@@ -91,6 +91,14 @@ void AP_Camera_Mount::send_camera_information(mavlink_channel_t chan) const
     }
 }
 
+void AP_Camera_Mount::send_camera_information(mavlink_channel_t chan, uint8_t source_compid) const
+{
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        return mount->send_camera_information(get_mount_instance(), chan, source_compid);
+    }
+}
+
 // send camera settings message to GCS
 void AP_Camera_Mount::send_camera_settings(mavlink_channel_t chan) const
 {
@@ -100,12 +108,28 @@ void AP_Camera_Mount::send_camera_settings(mavlink_channel_t chan) const
     }
 }
 
+void AP_Camera_Mount::send_camera_settings(mavlink_channel_t chan, uint8_t source_compid) const
+{
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        return mount->send_camera_settings(get_mount_instance(), chan, source_compid);
+    }
+}
+
 // send camera capture status message to GCS
 void AP_Camera_Mount::send_camera_capture_status(mavlink_channel_t chan) const
 {
     AP_Mount* mount = AP::mount();
     if (mount != nullptr) {
         return mount->send_camera_capture_status(get_mount_instance(), chan);
+    }
+}
+
+void AP_Camera_Mount::send_camera_capture_status(mavlink_channel_t chan, uint8_t source_compid) const
+{
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        return mount->send_camera_capture_status(get_mount_instance(), chan, source_compid);
     }
 }
 

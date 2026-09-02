@@ -6072,12 +6072,19 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         queued_param_send();
         break;
 
-    case MSG_HEARTBEAT:
+    case MSG_HEARTBEAT: {
         CHECK_PAYLOAD_SIZE(HEARTBEAT);
         last_heartbeat_time = AP_HAL::millis();
         send_heartbeat();
-        break;
 
+#if AP_CAMERA_ENABLED
+        AP_Camera *camera = AP::camera();
+        if (camera != nullptr) {
+            camera->send_camera_component_heartbeats(chan);
+        }
+#endif  // AP_CAMERA_ENABLED
+        break;
+    }
     case MSG_HWSTATUS:
         CHECK_PAYLOAD_SIZE(HWSTATUS);
         send_hwstatus();

@@ -1046,8 +1046,14 @@ bool AP_Mount_Siyi::set_camera_source(uint8_t primary_source, uint8_t secondary_
     return send_1byte_packet(SiyiCommandId::SET_CAMERA_IMAGE_TYPE, (uint8_t)cam_image_type);
 }
 
-// send camera information message to GCS
+// send camera information message to GCS using autopilot component ID as source
 void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
+{
+    send_camera_information(chan, mavlink_system.compid);
+}
+
+// send camera information message to GCS using specified source component ID
+void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan, uint8_t source_compid) const
 {
     // exit immediately if not initialised
     if (!_initialised || !_fw_version.received) {
@@ -1087,8 +1093,12 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
                            CAMERA_CAP_FLAGS_HAS_BASIC_FOCUS;
 
     // send CAMERA_INFORMATION message
-    mavlink_msg_camera_information_send(
+    mavlink_message_t msg;
+    mavlink_msg_camera_information_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
         chan,
+        &msg,
         AP_HAL::millis(),       // time_boot_ms
         vendor_name,            // vendor_name uint8_t[32]
         model_name,             // model_name uint8_t[32]
@@ -1102,11 +1112,20 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
         flags,                  // flags uint32_t (CAMERA_CAP_FLAGS)
         0,                      // cam_definition_version uint16_t
         cam_definition_uri,     // cam_definition_uri char[140]
-        _instance + 1);         // gimbal_device_id uint8_t
+        _instance + 1,          // gimbal_device_id uint8_t
+        _instance + 1          // camera_id uint8_t
+    );
+    _mavlink_resend_uart(chan, &msg);
 }
 
-// send camera settings message to GCS
+// send camera settings message to GCS using autopilot component ID as source
 void AP_Mount_Siyi::send_camera_settings(mavlink_channel_t chan) const
+{
+    send_camera_settings(chan, mavlink_system.compid);
+}
+
+// send camera settings message to GCS using specified source component ID
+void AP_Mount_Siyi::send_camera_settings(mavlink_channel_t chan, uint8_t source_compid) const
 {
     const uint8_t mode_id = (_config_info.record_status == RecordingStatus::ON) ? CAMERA_MODE_VIDEO : CAMERA_MODE_IMAGE;
     const float zoom_mult_max = get_zoom_mult_max();
@@ -1116,26 +1135,45 @@ void AP_Mount_Siyi::send_camera_settings(mavlink_channel_t chan) const
     }
 
     // send CAMERA_SETTINGS message
-    mavlink_msg_camera_settings_send(
+    mavlink_message_t msg;
+    mavlink_msg_camera_settings_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
         chan,
+        &msg,
         AP_HAL::millis(),   // time_boot_ms
         mode_id,            // camera mode (0:image, 1:video, 2:image survey)
         zoom_pct,           // zoomLevel float, percentage from 0 to 100, NaN if unknown
-        NaNf);              // focusLevel float, percentage from 0 to 100, NaN if unknown
+        NaNf                // focusLevel float, percentage from 0 to 100, NaN if unknown
+    );
+    _mavlink_resend_uart(chan, &msg);
 }
 
-// send camera capture status message to GCS
+// send camera capture status message to GCS using autopilot component ID as source
 void AP_Mount_Siyi::send_camera_capture_status(mavlink_channel_t chan) const
 {
-    mavlink_msg_camera_capture_status_send(
+    send_camera_capture_status(chan, mavlink_system.compid);
+}
+
+// send camera capture status message to GCS using specified source component ID
+void AP_Mount_Siyi::send_camera_capture_status(mavlink_channel_t chan, uint8_t source_compid) const
+{
+    mavlink_message_t msg;
+    mavlink_msg_camera_capture_status_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
         chan,
+        &msg,
         AP_HAL::millis(),          // time_boot_ms
         _video_recording ? 1 : 0,  // image_status
         _video_recording ? 1 : 0,  // video_status
         NaNf,                      // image_capture_interval (s)
         0,                         // recording_time_ms (ms)
         NaNf,                      // available_capacity (MiB)
-        0);                        // image_count
+        0,                         // image_count
+        _instance + 1             // camera id
+    );
+    _mavlink_resend_uart(chan, &msg);
 }
 
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED

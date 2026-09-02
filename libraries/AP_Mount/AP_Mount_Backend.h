@@ -191,12 +191,21 @@ public:
 
     // send camera information message to GCS
     virtual void send_camera_information(mavlink_channel_t chan) const {}
+    virtual void send_camera_information(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_information(chan);
+    }
 
     // send camera settings message to GCS
     virtual void send_camera_settings(mavlink_channel_t chan) const {}
+    virtual void send_camera_settings(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_settings(chan);
+    }
 
     // send camera capture status message to GCS
     virtual void send_camera_capture_status(mavlink_channel_t chan) const {}
+    virtual void send_camera_capture_status(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_capture_status(chan);
+    }
 
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal status message to GCS

@@ -357,7 +357,8 @@ void AP_Camera_Backend::send_camera_capture_status(mavlink_channel_t chan) const
         static_cast<float>(time_interval_settings.time_interval_ms) / 1000.0, // image capture interval (s)
         0,                // elapsed time since recording started (ms)
         NaNf,             // available storage capacity (ms)
-        image_index);     // total number of images captured
+        image_index,      // total number of images captured
+        _instance + 1);   // camera device id
 }
 
 // setup a callback for a feedback pin. When on PX4 with the right FMU
