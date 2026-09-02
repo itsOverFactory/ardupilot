@@ -1069,7 +1069,9 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan, uint8_t sour
     strncpy((char *)model_name, get_model_name(), sizeof(model_name)-1);
 
     // focal length
-    // To-Do: check these values are correct for A2, ZR30, ZT30
+    // TODO: Handle different focal lengths for different lenses
+    // TODO: Add support for sensor size, image resolution, lens id, 
+
     float focal_length_mm = 0;
     switch (_hardware_model) {
     case HardwareModel::UNKNOWN:
@@ -1079,10 +1081,18 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan, uint8_t sour
         focal_length_mm = 21;
         break;
     case HardwareModel::ZR10:
+        // focal length range 5.2 ~ 47.4
+        focal_length_mm = 5.2;
+        break;
     case HardwareModel::ZR30:
+        // focal length range 4.5 ~ 148.4
+        focal_length_mm = 4.5;
+        break;
     case HardwareModel::ZT30:
-        // focal length range from 5.15 ~ 47.38
-        focal_length_mm = 5.15;
+        // ZOOM focal length range from 4.8 ~ 149
+        // THERMAL focal length 19
+        // WIDE focal length 20
+        focal_length_mm = 4.8;
         break;
     }
 
