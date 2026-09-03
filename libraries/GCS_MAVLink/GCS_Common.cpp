@@ -3203,6 +3203,7 @@ uint8_t GCS::get_channel_from_port_number(uint8_t port_num)
 MAV_RESULT GCS_MAVLINK::handle_command_request_message(const mavlink_command_int_t &packet)
 {
     const uint32_t mavlink_id = (uint32_t)packet.param1;
+    send_text(MAV_SEVERITY_INFO, "Requesting message ID %u.............", (unsigned int)mavlink_id);
     const ap_message id = mavlink_id_to_ap_message_id(mavlink_id);
     if (id == MSG_LAST) {
         return MAV_RESULT_FAILED;
@@ -3752,11 +3753,53 @@ MAV_RESULT GCS_MAVLINK::handle_command_camera(const mavlink_command_int_t &packe
     if (camera == nullptr) {
         return MAV_RESULT_UNSUPPORTED;
     }
-
     return camera->handle_command(packet);
+}
+
+static bool is_camera_ack_command(const MAV_CMD cmd)
+{
+    switch (cmd) {
+    case MAV_CMD_IMAGE_START_CAPTURE:
+    case MAV_CMD_IMAGE_STOP_CAPTURE:
+    case MAV_CMD_VIDEO_START_CAPTURE:
+    case MAV_CMD_VIDEO_STOP_CAPTURE:
+        return true;
+    default:
+        return false;
+    }
 }
 #endif
 
+static uint8_t ack_source_compid_for_command(MAV_CMD cmd, uint8_t target_component)
+{
+#if AP_CAMERA_ENABLED
+    const bool explicit_target = (target_component != MAV_COMP_ID_ALL);
+    const bool target_is_camera = (target_component >= MAV_COMP_ID_CAMERA) && (target_component <= MAV_COMP_ID_CAMERA6);
+    
+    if (explicit_target && target_is_camera && is_camera_ack_command(cmd)) {
+        return target_component;
+    }
+#endif
+    return mavlink_system.compid;
+}
+
+static void send_command_ack_with_source_compid(mavlink_channel_t chan, MAV_CMD cmd, MAV_RESULT result, 
+                                                uint8_t source_compid, uint8_t target_system, uint8_t target_component)
+{
+    mavlink_message_t ack_msg;
+    mavlink_msg_command_ack_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
+        chan,
+        &ack_msg,
+        cmd,
+        result,
+        0,
+        0,
+        target_system,
+        target_component);
+    _mavlink_resend_uart(chan, &ack_msg);
+}
 
 #if AP_AHRS_ENABLED
 // sets ekf_origin if it has not been set.
@@ -5186,10 +5229,24 @@ void GCS_MAVLINK::handle_command_long(const mavlink_message_t &msg)
     const MAV_RESULT result = try_command_long_as_command_int(packet, msg);
 
     // send ACK or NAK
-    mavlink_msg_command_ack_send(chan, packet.command, result,
-                                 0, 0,
-                                 msg.sysid,
-                                 msg.compid);
+    const uint8_t ack_compid = ack_source_compid_for_command((MAV_CMD)packet.command, packet.target_component);
+    if (ack_compid == mavlink_system.compid) {
+        // if the command is targeted at us, send the ACK from our compid
+        mavlink_msg_command_ack_send(chan, packet.command, result,
+                                     0, 0,
+                                     msg.sysid,
+                                     msg.compid);
+    } else {
+        // if the command is targeted at another component, check if we need to send the ACK from that component
+        send_command_ack_with_source_compid(
+            chan,
+            (MAV_CMD)packet.command,
+            result,
+            ack_compid,
+            msg.sysid,
+            msg.compid
+        );
+    }
 
 #if HAL_LOGGING_ENABLED
     // log the packet:
@@ -5653,10 +5710,24 @@ void GCS_MAVLINK::handle_command_int(const mavlink_message_t &msg)
     const MAV_RESULT result = handle_command_int_packet(packet, msg);
 
     // send ACK or NAK
-    mavlink_msg_command_ack_send(chan, packet.command, result,
-                                 0, 0,
-                                 msg.sysid,
-                                 msg.compid);
+    const uint8_t ack_compid = ack_source_compid_for_command((MAV_CMD)packet.command, packet.target_component);
+    if (ack_compid == mavlink_system.compid) {
+        // if the command is targeted at us, send the ACK from our compid
+        mavlink_msg_command_ack_send(chan, packet.command, result,
+                                     0, 0,
+                                     msg.sysid,
+                                     msg.compid);
+    } else {
+        // if the command is targeted at another component, check if we need to send the ACK from that component
+        send_command_ack_with_source_compid(
+            chan,
+            (MAV_CMD)packet.command,
+            result,
+            ack_compid,
+            msg.sysid,
+            msg.compid
+        );
+    }
 
 #if HAL_LOGGING_ENABLED
     AP::logger().Write_Command(packet, msg.sysid, msg.compid, result);
