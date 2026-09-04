@@ -1079,10 +1079,17 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
     }
 
     // capability flags
-    const uint32_t flags = CAMERA_CAP_FLAGS_CAPTURE_VIDEO |
-                           CAMERA_CAP_FLAGS_CAPTURE_IMAGE |
-                           CAMERA_CAP_FLAGS_HAS_BASIC_ZOOM |
-                           CAMERA_CAP_FLAGS_HAS_BASIC_FOCUS;
+    uint32_t flags = CAMERA_CAP_FLAGS_CAPTURE_VIDEO |
+                      CAMERA_CAP_FLAGS_CAPTURE_IMAGE |
+                      CAMERA_CAP_FLAGS_HAS_BASIC_ZOOM |
+                      CAMERA_CAP_FLAGS_HAS_BASIC_FOCUS;
+
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+    if (_hardware_model == HardwareModel::ZT6 ||
+        _hardware_model == HardwareModel::ZT30) {
+      flags |= CAMERA_CAP_FLAGS_HAS_THERMAL_RANGE;
+    }
+#endif
 
     // send CAMERA_INFORMATION message
     mavlink_msg_camera_information_send(
