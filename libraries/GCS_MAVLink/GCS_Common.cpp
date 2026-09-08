@@ -491,7 +491,59 @@ void GCS_MAVLINK::send_distance_sensor()
 #if HAL_PROXIMITY_ENABLED
     send_proximity();
 #endif
+
+#if HAL_MOUNT_ENABLED
+    send_distance_sensor_mount();
+#endif
 }
+
+#if HAL_MOUNT_ENABLED
+static constexpr uint8_t MOUNT_SENSOR_ID_START = 30; // magic number
+// Aug 17, 2026: Keep it hardware agnostic.
+// We want to send rangefinder value from any capable mount.
+void GCS_MAVLINK::send_distance_sensor_mount() const {
+  AP_Mount *mount = AP_Mount::get_singleton();
+  if (mount == nullptr) {
+    return;
+  }
+
+  for (uint8_t instance = 0; instance < AP_MOUNT_MAX_INSTANCES; instance++) {
+    if (!HAVE_PAYLOAD_SPACE(chan, DISTANCE_SENSOR_MOUNT)) {
+      return;
+    }
+
+    float distance_m;
+    if (!mount->get_rangefinder_distance(instance, distance_m)) {
+      continue;
+    }
+
+    Quaternion att_quat;
+    const bool have_attitude =
+        mount->get_attitude_quaternion(instance, att_quat);
+
+    const uint32_t min_distance_cm =
+        mount->get_rangefinder_distance_min_cm(instance);
+    const uint32_t max_distance_cm =
+        mount->get_rangefinder_distance_max_cm(instance);
+    const uint32_t current_distance_cm = distance_m * 100.0f;
+
+    float quat_array[4]{};
+    if (have_attitude) {
+      quat_array[0] = att_quat.q1;
+      quat_array[1] = att_quat.q2;
+      quat_array[2] = att_quat.q3;
+      quat_array[3] = att_quat.q4;
+    }
+
+    mavlink_msg_distance_sensor_mount_send(
+        chan, AP_HAL::millis(), min_distance_cm, max_distance_cm,
+        current_distance_cm, MAV_DISTANCE_SENSOR_LASER,
+        MOUNT_SENSOR_ID_START + instance,
+        have_attitude ? MAV_SENSOR_ROTATION_CUSTOM : MAV_SENSOR_ROTATION_NONE,
+        0, 0, 0, quat_array, 0);
+  }
+}
+#endif  // HAL_MOUNT_ENABLED
 
 #if AP_RANGEFINDER_ENABLED
 void GCS_MAVLINK::send_rangefinder() const

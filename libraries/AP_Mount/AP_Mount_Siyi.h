@@ -100,6 +100,10 @@ public:
     // get rangefinder distance.  Returns true on success
     bool get_rangefinder_distance(float& distance_m) const override;
 
+    // get rangefinder minimum and maximum distances (in cm)
+    uint32_t get_rangefinder_distance_min_cm() const override;
+    uint32_t get_rangefinder_distance_max_cm() const override;
+
 protected:
 
     // get attitude as a quaternion.  returns true on success

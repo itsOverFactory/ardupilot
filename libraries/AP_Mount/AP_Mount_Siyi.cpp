@@ -18,6 +18,8 @@ extern const AP_HAL::HAL& hal;
 #define AP_MOUNT_SIYI_YAW_P         1.50    // yaw controller P gain (converts yaw angle error to target rate)
 #define AP_MOUNT_SIYI_TIMEOUT_MS    1000    // timeout for health and rangefinder readings
 #define AP_MOUNT_SIYI_THERM_TIMEOUT_MS  3000// timeout for temp min/max readings
+#define AP_MOUNT_SIYI_ZT30_RANGEFINDER_DIST_MIN_CM   500U     // ZT30 minimum distance (5m)
+#define AP_MOUNT_SIYI_ZT30_RANGEFINDER_DIST_MAX_CM   120000U  // ZT30 maximum distance (1200m).
 
 #define AP_MOUNT_SIYI_DEBUG 0
 #define debug(fmt, args ...) do { if (AP_MOUNT_SIYI_DEBUG) { GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Siyi: " fmt, ## args); } } while (0)
@@ -1189,6 +1191,18 @@ bool AP_Mount_Siyi::get_rangefinder_distance(float& distance_m) const
 
     distance_m = _rangefinder_dist_m;
     return true;
+}
+
+// get rangefinder minimum distance (in cm)
+uint32_t AP_Mount_Siyi::get_rangefinder_distance_min_cm() const
+{
+    return AP_MOUNT_SIYI_ZT30_RANGEFINDER_DIST_MIN_CM;
+}
+
+// get rangefinder maximum distance (in cm)
+uint32_t AP_Mount_Siyi::get_rangefinder_distance_max_cm() const
+{
+    return AP_MOUNT_SIYI_ZT30_RANGEFINDER_DIST_MAX_CM;
 }
 
 // Checks that the firmware version on the Gimbal meets the minimum supported version.
