@@ -442,7 +442,7 @@ void AP_Mount_Siyi::process_packet()
             unexpected_len = true;
             break;
         }
-        debug("GimbRot:%u", (unsigned)_msg_buff[_msg_buff_data_start]);
+        // debug("GimbRot:%u", (unsigned)_msg_buff[_msg_buff_data_start]);
 #endif
         break;
 
@@ -496,6 +496,8 @@ void AP_Mount_Siyi::process_packet()
             (uint8_t)_config_info.mounting_dir,
             (uint8_t)_config_info.video_mode
         );
+        // TODO: Identify why the record_status byte is not correctly reporting when the camera is actively recording.
+        // _video_recording = (_config_info.record_status == RecordingStatus::ON);
         break;
     }
 
@@ -510,8 +512,8 @@ void AP_Mount_Siyi::process_packet()
         const char* err_prefix = "Mount: Siyi";
         (void)err_prefix;  // in case !HAL_GCS_ENABLED
         switch ((FunctionFeedbackInfo)func_feedback_info) {
-        case FunctionFeedbackInfo::SUCCESS:
-            debug("FnFeedB success");
+        case FunctionFeedbackInfo::PHOTO_SUCCESS:
+            debug("FnFeedB: photo success");
             break;
         case FunctionFeedbackInfo::FAILED_TO_TAKE_PHOTO:
             GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s failed to take picture", err_prefix);
@@ -524,6 +526,12 @@ void AP_Mount_Siyi::process_packet()
             break;
         case FunctionFeedbackInfo::FAILED_TO_RECORD_VIDEO:
             GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s failed to record video", err_prefix);
+            break;
+        case FunctionFeedbackInfo::RECORDING_STARTED:
+            debug("Video recording STARTED");
+            break;
+        case FunctionFeedbackInfo::RECORDING_STOPPED:
+            debug("Video recording STOPPED");
             break;
         default:
             debug("FnFeedB unexpected val:%u", (unsigned)func_feedback_info);
@@ -772,36 +780,32 @@ bool AP_Mount_Siyi::record_video(bool start_recording)
     bool success = true;
     bool send_toggle = false;
     if (start_recording) {
-        switch (_config_info.record_status) {
-            case RecordingStatus::ON:
-                // already recording...
-                break;
+        // TODO: Identify why the record_status byte is not correctly reporting when the camera is actively recording.
+        //       For now, just use the internal state variable to determine if we are already recording or not.
+        if (_video_recording) {
+            // already recording...
+        } else if (_config_info.record_status == RecordingStatus::NO_CARD) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Siyi: can't start recording: No Card");
+            success = false;
+        } else {
             // assume that DATA_LOSS is the same as OFF
-            case RecordingStatus::DATA_LOSS:
-            case RecordingStatus::OFF:
-                send_toggle = true;
-                break;
-            case RecordingStatus::NO_CARD:
-                GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Siyi: can't start recording: No Card");
-                success = false;
-                break;
+            send_toggle = true;
         }
     } else {
-        switch (_config_info.record_status) {
-            case RecordingStatus::ON:
-                send_toggle = true;
-                break;
-            // assume that DATA_LOSS is the same as OFF
-            case RecordingStatus::DATA_LOSS:
-            case RecordingStatus::OFF:
-            case RecordingStatus::NO_CARD:
-                // already off...
-                break;
+        if (_video_recording) {
+            send_toggle = true;
+        } else {
+            // already off...
         }
     }
 
     if (send_toggle) {
         success = send_1byte_packet(SiyiCommandId::PHOTO, (uint8_t)PhotoFunction::RECORD_VIDEO_TOGGLE);
+        if (success) {
+            _video_recording = start_recording;
+            // Ask AP_Camera/GCS scheduler to publish CAMERA_CAPTURE_STATUS message to indicate recording state has changed
+            GCS_SEND_MESSAGE(MSG_CAMERA_CAPTURE_STATUS);
+        }
     }
 
     // request recording state update from gimbal
@@ -1052,8 +1056,14 @@ bool AP_Mount_Siyi::set_camera_source(uint8_t primary_source, uint8_t secondary_
     return send_1byte_packet(SiyiCommandId::SET_CAMERA_IMAGE_TYPE, (uint8_t)cam_image_type);
 }
 
-// send camera information message to GCS
+// send camera information message to GCS using autopilot component ID as source
 void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
+{
+    send_camera_information(chan, mavlink_system.compid);
+}
+
+// send camera information message to GCS using specified source component ID
+void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan, uint8_t source_compid) const
 {
     // exit immediately if not initialised
     if (!_initialised || !_fw_version.received) {
@@ -1069,7 +1079,9 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
     strncpy((char *)model_name, get_model_name(), sizeof(model_name)-1);
 
     // focal length
-    // To-Do: check these values are correct for A2, ZR30, ZT30
+    // TODO: Handle different focal lengths for different lenses
+    // TODO: Add support for sensor size, image resolution, lens id, 
+
     float focal_length_mm = 0;
     switch (_hardware_model) {
     case HardwareModel::UNKNOWN:
@@ -1079,10 +1091,18 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
         focal_length_mm = 21;
         break;
     case HardwareModel::ZR10:
+        // focal length range 5.2 ~ 47.4
+        focal_length_mm = 5.2;
+        break;
     case HardwareModel::ZR30:
+        // focal length range 4.5 ~ 148.4
+        focal_length_mm = 4.5;
+        break;
     case HardwareModel::ZT30:
-        // focal length range from 5.15 ~ 47.38
-        focal_length_mm = 5.15;
+        // ZOOM focal length range from 4.8 ~ 149
+        // THERMAL focal length 19
+        // WIDE focal length 20
+        focal_length_mm = 4.8;
         break;
     }
 
@@ -1100,8 +1120,12 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
 #endif
 
     // send CAMERA_INFORMATION message
-    mavlink_msg_camera_information_send(
+    mavlink_message_t msg;
+    mavlink_msg_camera_information_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
         chan,
+        &msg,
         AP_HAL::millis(),       // time_boot_ms
         vendor_name,            // vendor_name uint8_t[32]
         model_name,             // model_name uint8_t[32]
@@ -1115,11 +1139,19 @@ void AP_Mount_Siyi::send_camera_information(mavlink_channel_t chan) const
         flags,                  // flags uint32_t (CAMERA_CAP_FLAGS)
         0,                      // cam_definition_version uint16_t
         cam_definition_uri,     // cam_definition_uri char[140]
-        _instance + 1);         // gimbal_device_id uint8_t
+        _instance + 1           // gimbal_device_id uint8_t
+    );
+    _mavlink_resend_uart(chan, &msg);
 }
 
-// send camera settings message to GCS
+// send camera settings message to GCS using autopilot component ID as source
 void AP_Mount_Siyi::send_camera_settings(mavlink_channel_t chan) const
+{
+    send_camera_settings(chan, mavlink_system.compid);
+}
+
+// send camera settings message to GCS using specified source component ID
+void AP_Mount_Siyi::send_camera_settings(mavlink_channel_t chan, uint8_t source_compid) const
 {
     const uint8_t mode_id = (_config_info.record_status == RecordingStatus::ON) ? CAMERA_MODE_VIDEO : CAMERA_MODE_IMAGE;
     const float zoom_mult_max = get_zoom_mult_max();
@@ -1129,12 +1161,45 @@ void AP_Mount_Siyi::send_camera_settings(mavlink_channel_t chan) const
     }
 
     // send CAMERA_SETTINGS message
-    mavlink_msg_camera_settings_send(
+    mavlink_message_t msg;
+    mavlink_msg_camera_settings_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
         chan,
+        &msg,
         AP_HAL::millis(),   // time_boot_ms
         mode_id,            // camera mode (0:image, 1:video, 2:image survey)
         zoom_pct,           // zoomLevel float, percentage from 0 to 100, NaN if unknown
-        NaNf);              // focusLevel float, percentage from 0 to 100, NaN if unknown
+        NaNf                // focusLevel float, percentage from 0 to 100, NaN if unknown
+    );
+    _mavlink_resend_uart(chan, &msg);
+}
+
+// send camera capture status message to GCS using autopilot component ID as source
+void AP_Mount_Siyi::send_camera_capture_status(mavlink_channel_t chan) const
+{
+    send_camera_capture_status(chan, mavlink_system.compid);
+}
+
+// send camera capture status message to GCS using specified source component ID
+void AP_Mount_Siyi::send_camera_capture_status(mavlink_channel_t chan, uint8_t source_compid) const
+{
+    mavlink_message_t msg;
+    mavlink_msg_camera_capture_status_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
+        chan,
+        &msg,
+        AP_HAL::millis(),          // time_boot_ms
+        _video_recording ? 1 : 0,  // image_status
+        _video_recording ? 1 : 0,  // video_status
+        NaNf,                      // image_capture_interval (s)
+        0,                         // recording_time_ms (ms)
+        NaNf,                      // available_capacity (MiB)
+        0,                         // image_count
+        _instance + 1             // camera id
+    );
+    _mavlink_resend_uart(chan, &msg);
 }
 
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED

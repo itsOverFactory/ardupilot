@@ -78,9 +78,15 @@ public:
 
     // send camera information message to GCS
     void send_camera_information(mavlink_channel_t chan) const override;
+    void send_camera_information(mavlink_channel_t chan, uint8_t source_compid) const override;
 
     // send camera settings message to GCS
     void send_camera_settings(mavlink_channel_t chan) const override;
+    void send_camera_settings(mavlink_channel_t chan, uint8_t source_compid) const override;
+
+    // send camera capture status message to GCS
+    void send_camera_capture_status(mavlink_channel_t chan) const override;
+    void send_camera_capture_status(mavlink_channel_t chan, uint8_t source_compid) const override;
 
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS
@@ -144,11 +150,13 @@ private:
 
     // Function Feedback Info packet info_type values
     enum class FunctionFeedbackInfo : uint8_t {
-        SUCCESS = 0,
+        PHOTO_SUCCESS = 0,
         FAILED_TO_TAKE_PHOTO = 1,
         HDR_ON = 2,
         HDR_OFF = 3,
-        FAILED_TO_RECORD_VIDEO = 4
+        FAILED_TO_RECORD_VIDEO = 4,
+        RECORDING_STARTED = 5,
+        RECORDING_STOPPED = 6,
     };
 
     // Photo Function packet func_type values
@@ -352,6 +360,7 @@ private:
 
     // Configuration info received from gimbal
     GimbalConfigInfo _config_info;
+    bool _video_recording;                          // true if video is currently recording
     
     // rangefinder variables
     uint32_t _last_rangefinder_req_ms;              // system time of last request for rangefinder distance
