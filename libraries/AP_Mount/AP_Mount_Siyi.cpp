@@ -442,7 +442,7 @@ void AP_Mount_Siyi::process_packet()
             unexpected_len = true;
             break;
         }
-        debug("GimbRot:%u", (unsigned)_msg_buff[_msg_buff_data_start]);
+        // debug("GimbRot:%u", (unsigned)_msg_buff[_msg_buff_data_start]);
 #endif
         break;
 
@@ -512,8 +512,8 @@ void AP_Mount_Siyi::process_packet()
         const char* err_prefix = "Mount: Siyi";
         (void)err_prefix;  // in case !HAL_GCS_ENABLED
         switch ((FunctionFeedbackInfo)func_feedback_info) {
-        case FunctionFeedbackInfo::SUCCESS:
-            debug("FnFeedB success");
+        case FunctionFeedbackInfo::PHOTO_SUCCESS:
+            debug("FnFeedB: photo success");
             break;
         case FunctionFeedbackInfo::FAILED_TO_TAKE_PHOTO:
             GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s failed to take picture", err_prefix);
@@ -526,6 +526,12 @@ void AP_Mount_Siyi::process_packet()
             break;
         case FunctionFeedbackInfo::FAILED_TO_RECORD_VIDEO:
             GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s failed to record video", err_prefix);
+            break;
+        case FunctionFeedbackInfo::RECORDING_STARTED:
+            debug("Video recording STARTED");
+            break;
+        case FunctionFeedbackInfo::RECORDING_STOPPED:
+            debug("Video recording STOPPED");
             break;
         default:
             debug("FnFeedB unexpected val:%u", (unsigned)func_feedback_info);
