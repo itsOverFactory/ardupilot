@@ -5533,6 +5533,7 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
 #endif
 
 #if AP_CAMERA_ENABLED
+    case MAV_CMD_REQUEST_CAMERA_INFORMATION:
     case MAV_CMD_DO_DIGICAM_CONFIGURE:
     case MAV_CMD_DO_DIGICAM_CONTROL:
     case MAV_CMD_DO_SET_CAM_TRIGG_DIST:

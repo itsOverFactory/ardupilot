@@ -312,6 +312,11 @@ private:
     // update zoom controller
     void update_zoom_control();
 
+    // update gcs camera settings
+    uint32_t _last_gcs_camera_settings_send_ms;
+    uint32_t _last_zoom_mult_update_ms;
+    void update_gcs_camera_settings();
+
     // get model name string, returns nullptr if hardware id is unknown
     const char* get_model_name() const;
 
@@ -356,6 +361,7 @@ private:
     ZoomType _zoom_type;                            // current zoom type
     float _zoom_rate_target;                        // current zoom rate target
     float _zoom_mult;                               // most recent actual zoom multiple received from camera
+    uint16_t _last_zoom_mult_int;                   // last zoom multiple sent to camera
     uint32_t _last_zoom_control_ms;                 // system time that zoom control was last run
 
     // Configuration info received from gimbal

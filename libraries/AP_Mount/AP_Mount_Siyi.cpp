@@ -174,6 +174,12 @@ void AP_Mount_Siyi::update()
             send_target_rates(mnt_target.rate_rads.pitch, mnt_target.rate_rads.yaw, mnt_target.rate_rads.yaw_is_ef);
             break;
     }
+
+    // update gcs camera settings at 1hz if needed
+    if ((now_ms - _last_gcs_camera_settings_send_ms) >= 1000) {
+        _last_gcs_camera_settings_send_ms = now_ms;
+        update_gcs_camera_settings();
+    }
 }
 
 // return true if healthy
@@ -421,7 +427,15 @@ void AP_Mount_Siyi::process_packet()
 #endif
             break;
         }
-        _zoom_mult = UINT16_VALUE(_msg_buff[_msg_buff_data_start+1], _msg_buff[_msg_buff_data_start]) * 0.1;
+        const uint16_t zoom_mult_int = UINT16_VALUE(_msg_buff[_msg_buff_data_start+1], _msg_buff[_msg_buff_data_start]);
+        
+        _zoom_mult = zoom_mult_int * 0.1f;
+
+        if (zoom_mult_int != _last_zoom_mult_int) {
+            _last_zoom_mult_int = zoom_mult_int;
+            _last_zoom_mult_update_ms = AP_HAL::millis();
+        }
+
         debug("ZoomMult:%4.1f", (double)_zoom_mult);
         break;
     }
@@ -856,7 +870,7 @@ float AP_Mount_Siyi::get_zoom_mult_max() const
     case HardwareModel::ZR10:
     case HardwareModel::ZR30:
     case HardwareModel::ZT30:
-        // 30x hybrid zoom (optical + digital)
+        // 30x optical zoom or 180x hybrid (optical + digital)
         return 30;
     }
     return 0;
@@ -909,6 +923,16 @@ void AP_Mount_Siyi::update_zoom_control()
         if (!is_zero(_zoom_rate_target)) {
             send_zoom_rate(_zoom_rate_target);
         }
+    }
+}
+
+// update gcs camera settings if necessary
+// if zoom functionality was used in the last 5 seconds, then we report the camera settings with newest zoom info
+void AP_Mount_Siyi::update_gcs_camera_settings()
+{
+    const uint32_t now_ms = AP_HAL::millis();
+    if (now_ms - _last_zoom_mult_update_ms < 5000) {
+        GCS_SEND_MESSAGE(MSG_CAMERA_SETTINGS);
     }
 }
 
@@ -1157,7 +1181,12 @@ void AP_Mount_Siyi::send_camera_settings(mavlink_channel_t chan, uint8_t source_
     const float zoom_mult_max = get_zoom_mult_max();
     float zoom_pct = 0.0;
     if (is_positive(zoom_mult_max)) {
-        zoom_pct = linear_interpolate(0, 100, _zoom_mult, 1.0, zoom_mult_max);
+        if (_zoom_mult <= zoom_mult_max) {
+            zoom_pct = linear_interpolate(0, 100, _zoom_mult, 1.0, zoom_mult_max);
+        } else {
+            // continue beyond 100% for hybrid zoom.  e.g. 30x optical + 150x digital = 180x hybrid
+            zoom_pct = (_zoom_mult / zoom_mult_max) * 100.0f;
+        }
     }
 
     // send CAMERA_SETTINGS message
