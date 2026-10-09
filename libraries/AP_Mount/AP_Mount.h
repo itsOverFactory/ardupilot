@@ -304,6 +304,9 @@ public:
     // enable/disable rangefinder.  Returns true on success
     bool set_rangefinder_enable(uint8_t instance, bool enable);
 
+    // get rangefinder enabled state as reported by the mount.  Returns true on success
+    bool get_rangefinder_enabled(uint8_t instance, bool& enabled) const;
+
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
 

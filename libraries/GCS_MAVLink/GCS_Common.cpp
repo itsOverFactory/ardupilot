@@ -508,6 +508,18 @@ void GCS_MAVLINK::send_distance_sensor_mount() const {
   }
 
   for (uint8_t instance = 0; instance < AP_MOUNT_MAX_INSTANCES; instance++) {
+    bool rangefinder_enabled;
+    if (mount->get_rangefinder_enabled(instance, rangefinder_enabled)) {
+      if (!HAVE_PAYLOAD_SPACE(chan, MOUNT_RANGEFINDER_STATUS)) {
+        return;
+      }
+      // right now it is sent at the same rate as DISTANCE_SENSOR_MOUNT
+      //? Likely to decouple this in the future. For now, OK.
+      mavlink_msg_mount_rangefinder_status_send(
+          chan, AP_HAL::millis(), MOUNT_SENSOR_ID_START + instance,
+          rangefinder_enabled);
+    }
+
     if (!HAVE_PAYLOAD_SPACE(chan, DISTANCE_SENSOR_MOUNT)) {
       return;
     }
@@ -542,6 +554,25 @@ void GCS_MAVLINK::send_distance_sensor_mount() const {
         have_attitude ? MAV_SENSOR_ROTATION_CUSTOM : MAV_SENSOR_ROTATION_NONE,
         0, 0, 0, quat_array, 0);
   }
+}
+
+// enable/disable the rangefinder of the mount addressed by the sensor id
+MAV_RESULT GCS_MAVLINK::handle_command_do_mount_rangefinder_enable(const mavlink_command_int_t &packet)
+{
+    AP_Mount *mount = AP_Mount::get_singleton();
+    if (mount == nullptr) {
+        return MAV_RESULT_UNSUPPORTED;
+    }
+
+    const int32_t instance = (int32_t)packet.param1 - MOUNT_SENSOR_ID_START;
+    if (instance < 0 || instance >= AP_MOUNT_MAX_INSTANCES) {
+        return MAV_RESULT_DENIED;
+    }
+
+    if (!mount->set_rangefinder_enable(instance, is_positive(packet.param2))) {
+        return MAV_RESULT_FAILED;
+    }
+    return MAV_RESULT_ACCEPTED;
 }
 #endif  // HAL_MOUNT_ENABLED
 
@@ -5501,6 +5532,11 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
 #if AP_RC_CHANNEL_ENABLED
     case MAV_CMD_DO_AUX_FUNCTION:
         return handle_command_do_aux_function(packet);
+#endif
+
+#if HAL_MOUNT_ENABLED
+    case MAV_CMD_DO_MOUNT_RANGEFINDER_ENABLE:
+        return handle_command_do_mount_rangefinder_enable(packet);
 #endif
 
 #if AP_FENCE_ENABLED

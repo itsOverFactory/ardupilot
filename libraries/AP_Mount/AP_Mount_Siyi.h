@@ -104,6 +104,12 @@ public:
     uint32_t get_rangefinder_distance_min_cm() const override;
     uint32_t get_rangefinder_distance_max_cm() const override;
 
+    // enable/disable rangefinder.  Returns true on success
+    bool set_rangefinder_enable(bool enable) override;
+
+    // get rangefinder enabled state as reported by the mount.  Returns true on success
+    bool get_rangefinder_enabled(bool& enabled) const override;
+
 protected:
 
     // get attitude as a quaternion.  returns true on success
@@ -137,6 +143,8 @@ private:
         SET_THERMAL_PALETTE = 0x1B,
         EXTERNAL_ATTITUDE = 0x22,
         SET_TIME = 0x30,
+        GET_LASER_RANGING_STATE = 0x31,
+        SET_LASER_RANGING_STATE = 0x32,
         SET_THERMAL_RAW_DATA = 0x34,
         SET_THERMAL_GAIN = 0x38,
         POSITION_DATA = 0x3e,
@@ -272,6 +280,7 @@ private:
     void request_function_feedback_info() { send_packet(SiyiCommandId::FUNCTION_FEEDBACK_INFO, nullptr, 0); }
     void request_gimbal_attitude() { send_packet(SiyiCommandId::ACQUIRE_GIMBAL_ATTITUDE, nullptr, 0); }
     void request_rangefinder_distance() { send_packet(SiyiCommandId::READ_RANGEFINDER, nullptr, 0); }
+    void request_rangefinder_state() { send_packet(SiyiCommandId::GET_LASER_RANGING_STATE, nullptr, 0); }
 
     // rotate gimbal.  pitch_rate and yaw_rate are scalars in the range -100 ~ +100
     // yaw_is_ef should be true if gimbal should maintain an earth-frame target (aka lock)
@@ -357,6 +366,9 @@ private:
     uint32_t _last_rangefinder_req_ms;              // system time of last request for rangefinder distance
     uint32_t _last_rangefinder_dist_ms;             // system time of last successful read of rangefinder distance
     float _rangefinder_dist_m;                      // distance received from rangefinder
+    uint32_t _last_rangefinder_state_req_ms;        // system time of last request for rangefinder state
+    uint32_t _last_rangefinder_state_ms;            // system time of last successful read of rangefinder state
+    bool _rangefinder_enabled;                      // rangefinder state received from gimbal
 
     // sending of attitude and position to gimbal
     uint32_t _last_attitude_send_ms;

@@ -85,6 +85,13 @@ void AP_Mount_Siyi::update()
         _last_rangefinder_req_ms = now_ms;
     }
 
+    // request rangefinder state from ZT30 at 2hz
+    // Doing this at 1hz would require a separate timeout macro
+    if ((_hardware_model == HardwareModel::ZT30) && (now_ms - _last_rangefinder_state_req_ms > 500)) {
+        request_rangefinder_state();
+        _last_rangefinder_state_req_ms = now_ms;
+    }
+
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // request thermal min/max from ZT30 or ZT6
     request_thermal_minmax();
@@ -576,6 +583,18 @@ void AP_Mount_Siyi::process_packet()
         // check siyi zt30 sdk guide for 0x15: Request Laser Ranging Distance
         _rangefinder_dist_m = (int16_t)UINT16_VALUE(_msg_buff[_msg_buff_data_start+1], _msg_buff[_msg_buff_data_start]) * 0.1;
         _last_rangefinder_dist_ms = AP_HAL::millis();
+        break;
+    }
+
+    case SiyiCommandId::GET_LASER_RANGING_STATE: {
+        if (_parsed_msg.data_bytes_received != 1) {
+#if AP_MOUNT_SIYI_DEBUG
+            unexpected_len = true;
+#endif
+            break;
+        }
+        _rangefinder_enabled = (_msg_buff[_msg_buff_data_start] == 1);
+        _last_rangefinder_state_ms = AP_HAL::millis();
         break;
     }
 
@@ -1205,6 +1224,33 @@ uint32_t AP_Mount_Siyi::get_rangefinder_distance_min_cm() const
 uint32_t AP_Mount_Siyi::get_rangefinder_distance_max_cm() const
 {
     return AP_MOUNT_SIYI_ZT30_RANGEFINDER_DIST_MAX_CM;
+}
+
+// enable/disable rangefinder.  Returns true on success
+bool AP_Mount_Siyi::set_rangefinder_enable(bool enable)
+{
+    // only supported on ZT30
+    if (_hardware_model != HardwareModel::ZT30) {
+        return false;
+    }
+
+    return send_1byte_packet(SiyiCommandId::SET_LASER_RANGING_STATE, enable ? 1 : 0);
+}
+
+bool AP_Mount_Siyi::get_rangefinder_enabled(bool& enabled) const
+{
+    // only supported on ZT30
+    if (_hardware_model != HardwareModel::ZT30) {
+        return false;
+    }
+
+    const uint32_t now_ms = AP_HAL::millis();
+    if ((_last_rangefinder_state_ms == 0) || (now_ms - _last_rangefinder_state_ms > AP_MOUNT_SIYI_TIMEOUT_MS)) {
+        return false;
+    }
+
+    enabled = _rangefinder_enabled;
+    return true;
 }
 
 // Checks that the firmware version on the Gimbal meets the minimum supported version.
