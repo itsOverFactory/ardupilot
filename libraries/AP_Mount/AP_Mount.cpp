@@ -987,6 +987,15 @@ bool AP_Mount::set_rangefinder_enable(uint8_t instance, bool enable)
     return backend->set_rangefinder_enable(enable);
 }
 
+bool AP_Mount::get_rangefinder_enabled(uint8_t instance, bool& enabled) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+    return backend->get_rangefinder_enabled(enabled);
+}
+
 AP_Mount_Backend *AP_Mount::get_primary() const
 {
     return get_instance(_primary);
