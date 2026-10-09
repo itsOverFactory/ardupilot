@@ -572,7 +572,9 @@ void AP_Mount_Siyi::process_packet()
 #endif
 
     case SiyiCommandId::READ_RANGEFINDER: {
-        _rangefinder_dist_m = UINT16_VALUE(_msg_buff[_msg_buff_data_start+1], _msg_buff[_msg_buff_data_start]);
+        // distance is reported in decimeters
+        // check siyi zt30 sdk guide for 0x15: Request Laser Ranging Distance
+        _rangefinder_dist_m = (int16_t)UINT16_VALUE(_msg_buff[_msg_buff_data_start+1], _msg_buff[_msg_buff_data_start]) * 0.1;
         _last_rangefinder_dist_ms = AP_HAL::millis();
         break;
     }
