@@ -221,6 +221,9 @@ public:
     // enable/disable rangefinder.  Returns true on success
     virtual bool set_rangefinder_enable(bool enable) { return false; }
 
+    // get rangefinder enabled state as reported by the mount.  Returns true on success
+    virtual bool get_rangefinder_enabled(bool& enabled) const { return false; }
+
     // get rangefinder minimum and maximum distances (in cm)
     virtual uint32_t get_rangefinder_distance_min_cm() const { return 0; }
     virtual uint32_t get_rangefinder_distance_max_cm() const { return UINT32_MAX; }

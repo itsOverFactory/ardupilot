@@ -353,6 +353,7 @@ public:
     void send_proximity();
 #if HAL_MOUNT_ENABLED
     void send_distance_sensor_mount() const;
+    MAV_RESULT handle_command_do_mount_rangefinder_enable(const mavlink_command_int_t &packet);
 #endif
     virtual void send_nav_controller_output() const = 0;
     virtual void send_pid_tuning() = 0;
