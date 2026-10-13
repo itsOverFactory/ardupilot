@@ -34,6 +34,9 @@ public:
     /* Do not allow copies */
     CLASS_NO_COPY(AP_Camera_Mount);
 
+    // return true if should use source compid for sending messages, false to use default compid (autopilot)
+    bool uses_source_compid() const override { return true; }
+
     // entry point to actually take a picture.  returns true on success
     bool trigger_pic() override;
 
@@ -63,12 +66,15 @@ public:
 
     // send camera information message to GCS
     void send_camera_information(mavlink_channel_t chan) const override;
+    void send_camera_information(mavlink_channel_t chan, uint8_t source_compid) const override;
 
     // send camera settings message to GCS
     void send_camera_settings(mavlink_channel_t chan) const override;
+    void send_camera_settings(mavlink_channel_t chan, uint8_t source_compid) const override;
 
     // send camera capture status message to GCS
     void send_camera_capture_status(mavlink_channel_t chan) const override;
+    void send_camera_capture_status(mavlink_channel_t chan, uint8_t source_compid) const override;
 
 #if AP_CAMERA_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS

@@ -282,6 +282,10 @@ void AP_Camera::handle_message(mavlink_channel_t chan, const mavlink_message_t &
 MAV_RESULT AP_Camera::handle_command(const mavlink_command_int_t &packet)
 {
     switch (packet.command) {
+    case MAV_CMD_REQUEST_CAMERA_INFORMATION:
+        // send_camera_information((mavlink_channel_t)packet.target_component);
+        GCS_SEND_MESSAGE(MSG_CAMERA_INFORMATION);
+        return MAV_RESULT_ACCEPTED;
     case MAV_CMD_DO_DIGICAM_CONFIGURE:
         configure(packet.param1, packet.param2, packet.param3, packet.param4, packet.x, packet.y, packet.z);
         return MAV_RESULT_ACCEPTED;
@@ -581,8 +585,46 @@ void AP_Camera::send_camera_information(mavlink_channel_t chan)
     // call each instance
     for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
         if (_backends[instance] != nullptr) {
-            _backends[instance]->send_camera_information(chan);
+            if (_backends[instance]->uses_source_compid()) {
+                _backends[instance]->send_camera_information(chan, camera_compid_for_instance(instance));
+            } else {    
+                _backends[instance]->send_camera_information(chan);
+            }
         }
+    }
+}
+
+uint8_t AP_Camera::camera_compid_for_instance(uint8_t instance) const
+{
+    uint8_t compid = MIN(MAV_COMP_ID_CAMERA + instance, MAV_COMP_ID_CAMERA6);
+    return compid;
+}
+
+void AP_Camera::send_camera_component_heartbeats(mavlink_channel_t chan)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
+        if (_backends[instance] == nullptr) {
+            continue;
+        }
+
+        // change to follow the same format as other send_ functions
+        // Generalize  _backends[instance]->send_heartbeat(chan);
+        mavlink_message_t msg;
+        mavlink_msg_heartbeat_pack_chan(
+            mavlink_system.sysid,
+            camera_compid_for_instance(instance),
+            chan,
+            &msg,
+            MAV_TYPE_CAMERA,
+            MAV_AUTOPILOT_INVALID,
+            0,
+            0,
+            MAV_STATE_ACTIVE
+        );
+
+        _mavlink_resend_uart(chan, &msg);
     }
 }
 
@@ -606,10 +648,13 @@ void AP_Camera::send_camera_settings(mavlink_channel_t chan)
 {
     WITH_SEMAPHORE(_rsem);
 
-    // call each instance
     for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
         if (_backends[instance] != nullptr) {
-            _backends[instance]->send_camera_settings(chan);
+            if (_backends[instance]->uses_source_compid()) {
+                _backends[instance]->send_camera_settings(chan, camera_compid_for_instance(instance));
+            } else {    
+                _backends[instance]->send_camera_settings(chan);
+            }
         }
     }
 }
@@ -637,7 +682,11 @@ void AP_Camera::send_camera_capture_status(mavlink_channel_t chan)
     // call each instance
     for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
         if (_backends[instance] != nullptr) {
-            _backends[instance]->send_camera_capture_status(chan);
+            if (_backends[instance]->uses_source_compid()) {
+                _backends[instance]->send_camera_capture_status(chan, camera_compid_for_instance(instance));
+            } else {    
+                _backends[instance]->send_camera_capture_status(chan);
+            }
         }
     }
 }

@@ -274,12 +274,15 @@ public:
 
     // send camera information message to GCS
     void send_camera_information(uint8_t instance, mavlink_channel_t chan) const;
+    void send_camera_information(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const;
 
     // send camera settings message to GCS
     void send_camera_settings(uint8_t instance, mavlink_channel_t chan) const;
+    void send_camera_settings(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const;
 
     // send camera capture status message to GCS
     void send_camera_capture_status(uint8_t instance, mavlink_channel_t chan) const;
+    void send_camera_capture_status(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const;
 
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS

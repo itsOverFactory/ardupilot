@@ -903,6 +903,14 @@ void AP_Mount::send_camera_information(uint8_t instance, mavlink_channel_t chan)
     }
     backend->send_camera_information(chan);
 }
+void AP_Mount::send_camera_information(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+    backend->send_camera_information(chan, source_compid);
+}
 
 // send camera settings message to GCS
 void AP_Mount::send_camera_settings(uint8_t instance, mavlink_channel_t chan) const
@@ -914,6 +922,15 @@ void AP_Mount::send_camera_settings(uint8_t instance, mavlink_channel_t chan) co
     backend->send_camera_settings(chan);
 }
 
+void AP_Mount::send_camera_settings(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+    backend->send_camera_settings(chan, source_compid);
+}
+
 // send camera capture status message to GCS
 void AP_Mount::send_camera_capture_status(uint8_t instance, mavlink_channel_t chan) const
 {
@@ -922,6 +939,15 @@ void AP_Mount::send_camera_capture_status(uint8_t instance, mavlink_channel_t ch
         return;
     }
     backend->send_camera_capture_status(chan);
+}
+
+void AP_Mount::send_camera_capture_status(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+    backend->send_camera_capture_status(chan, source_compid);
 }
 
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
