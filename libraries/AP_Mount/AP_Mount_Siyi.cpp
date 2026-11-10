@@ -18,6 +18,11 @@ extern const AP_HAL::HAL& hal;
 #define AP_MOUNT_SIYI_YAW_P         1.50    // yaw controller P gain (converts yaw angle error to target rate)
 #define AP_MOUNT_SIYI_TIMEOUT_MS    1000    // timeout for health and rangefinder readings
 #define AP_MOUNT_SIYI_THERM_TIMEOUT_MS  3000// timeout for temp min/max readings
+
+// thermal imaging is fixed at 640x512 for ZT30
+// This is also true for ZT6
+#define AP_MOUNT_SIYI_THERM_WIDTH   640
+#define AP_MOUNT_SIYI_THERM_HEIGHT  512
 #define AP_MOUNT_SIYI_ZT30_RANGEFINDER_DIST_MIN_CM   500U     // ZT30 minimum distance (5m)
 #define AP_MOUNT_SIYI_ZT30_RANGEFINDER_DIST_MAX_CM   120000U  // ZT30 maximum distance (1200m).
 
@@ -584,7 +589,46 @@ void AP_Mount_Siyi::process_packet()
         _thermal.min_pos.y = UINT16_VALUE(_msg_buff[_msg_buff_data_start+11], _msg_buff[_msg_buff_data_start+10]);
         break;
     }
+
+    case SiyiCommandId::GET_TEMP_POINT: {
+        if (_parsed_msg.data_bytes_received != 6) {
+#if AP_MOUNT_SIYI_DEBUG
+            unexpected_len = true;
 #endif
+            break;
+        }
+        _point_temperature.last_update_ms = AP_HAL::millis();
+        // ZT30 SDK: Temperature of the selected point.
+        _point_temperature.temp_C = (int16_t)UINT16_VALUE(_msg_buff[_msg_buff_data_start+1], _msg_buff[_msg_buff_data_start]) * 0.01;
+        _point_temperature.pos.x = UINT16_VALUE(_msg_buff[_msg_buff_data_start+3], _msg_buff[_msg_buff_data_start+2]);
+        _point_temperature.pos.y = UINT16_VALUE(_msg_buff[_msg_buff_data_start+5], _msg_buff[_msg_buff_data_start+4]);
+        GCS_SEND_MESSAGE(MSG_CAMERA_POINT_TEMPERATURE);
+        break;
+    }
+
+    case SiyiCommandId::GET_TEMP_REGION: {
+        if (_parsed_msg.data_bytes_received != 20) {
+#if AP_MOUNT_SIYI_DEBUG
+            unexpected_len = true;
+#endif
+            break;
+        }
+        _region_temperature.last_update_ms = AP_HAL::millis();
+        _region_temperature.top_left.x = UINT16_VALUE(_msg_buff[_msg_buff_data_start+1], _msg_buff[_msg_buff_data_start]);
+        _region_temperature.top_left.y = UINT16_VALUE(_msg_buff[_msg_buff_data_start+3], _msg_buff[_msg_buff_data_start+2]);
+        _region_temperature.bottom_right.x = UINT16_VALUE(_msg_buff[_msg_buff_data_start+5], _msg_buff[_msg_buff_data_start+4]);
+        _region_temperature.bottom_right.y = UINT16_VALUE(_msg_buff[_msg_buff_data_start+7], _msg_buff[_msg_buff_data_start+6]);
+        _region_temperature.max_C = (int16_t)UINT16_VALUE(_msg_buff[_msg_buff_data_start+9], _msg_buff[_msg_buff_data_start+8]) * 0.01;
+        _region_temperature.min_C = (int16_t)UINT16_VALUE(_msg_buff[_msg_buff_data_start+11], _msg_buff[_msg_buff_data_start+10]) * 0.01;
+        _region_temperature.max_pos.x = UINT16_VALUE(_msg_buff[_msg_buff_data_start+13], _msg_buff[_msg_buff_data_start+12]);
+        _region_temperature.max_pos.y = UINT16_VALUE(_msg_buff[_msg_buff_data_start+15], _msg_buff[_msg_buff_data_start+14]);
+        _region_temperature.min_pos.x = UINT16_VALUE(_msg_buff[_msg_buff_data_start+17], _msg_buff[_msg_buff_data_start+16]);
+        _region_temperature.min_pos.y = UINT16_VALUE(_msg_buff[_msg_buff_data_start+19], _msg_buff[_msg_buff_data_start+18]);
+        GCS_SEND_MESSAGE(MSG_CAMERA_REGION_TEMPERATURE);
+        break;
+    }
+#endif
+
 
     case SiyiCommandId::READ_RANGEFINDER: {
         // distance is reported in decimeters
@@ -1227,21 +1271,83 @@ void AP_Mount_Siyi::send_camera_capture_status(mavlink_channel_t chan, uint8_t s
 // send camera thermal range message to GCS
 void AP_Mount_Siyi::send_camera_thermal_range(mavlink_channel_t chan) const
 {
+    send_camera_thermal_range(chan, mavlink_system.compid);
+}
+
+
+void AP_Mount_Siyi::send_camera_thermal_range(mavlink_channel_t chan, uint8_t source_compid) const
+{
     const uint32_t now_ms = AP_HAL::millis();
     bool timeout = now_ms - _thermal.last_update_ms > AP_MOUNT_SIYI_THERM_TIMEOUT_MS;
 
     // send CAMERA_THERMAL_RANGE message
-    mavlink_msg_camera_thermal_range_send(
+    mavlink_message_t msg;
+    mavlink_msg_camera_thermal_range_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
         chan,
+        &msg,
         now_ms,             // time_boot_ms
         _instance + 1,      // video stream id (assume one-to-one mapping with camera id)
         _instance + 1,      // camera device id
         timeout ? NaNf : _thermal.max_C,     // max in degC
-        timeout ? NaNf : _thermal.max_pos.x, // max x position
-        timeout ? NaNf : _thermal.max_pos.y, // max y position
+        timeout ? NaNf : _thermal.max_pos.x / float(AP_MOUNT_SIYI_THERM_WIDTH - 1),
+        timeout ? NaNf : _thermal.max_pos.y / float(AP_MOUNT_SIYI_THERM_HEIGHT - 1),
         timeout ? NaNf : _thermal.min_C,     // min in degC
-        timeout ? NaNf : _thermal.min_pos.x, // min x position
-        timeout ? NaNf : _thermal.min_pos.y);// min y position
+        timeout ? NaNf : _thermal.min_pos.x / float(AP_MOUNT_SIYI_THERM_WIDTH - 1),
+        timeout ? NaNf : _thermal.min_pos.y / float(AP_MOUNT_SIYI_THERM_HEIGHT - 1));
+    _mavlink_resend_uart(chan, &msg);
+}
+
+void AP_Mount_Siyi::send_camera_point_temperature(mavlink_channel_t chan) const
+{
+    send_camera_point_temperature(chan, mavlink_system.compid);
+}
+
+void AP_Mount_Siyi::send_camera_point_temperature(mavlink_channel_t chan, uint8_t source_compid) const
+{
+    // send CAMERA_POINT_TEMPERATURE message
+    mavlink_message_t msg;
+    mavlink_msg_camera_point_temperature_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
+        chan,
+        &msg,
+        _point_temperature.last_update_ms,   // time_boot_ms
+        _instance + 1,      // camera device id
+        _point_temperature.pos.x / float(AP_MOUNT_SIYI_THERM_WIDTH - 1),
+        _point_temperature.pos.y / float(AP_MOUNT_SIYI_THERM_HEIGHT - 1),
+        _point_temperature.temp_C);     // temp in degC
+    _mavlink_resend_uart(chan, &msg);
+}
+
+void AP_Mount_Siyi::send_camera_region_temperature(mavlink_channel_t chan) const
+{
+    send_camera_region_temperature(chan, mavlink_system.compid);
+}
+
+void AP_Mount_Siyi::send_camera_region_temperature(mavlink_channel_t chan, uint8_t source_compid) const
+{
+    // send CAMERA_REGION_TEMPERATURE message
+    mavlink_message_t msg;
+    mavlink_msg_camera_region_temperature_pack_chan(
+        mavlink_system.sysid,
+        source_compid,
+        chan,
+        &msg,
+        _region_temperature.last_update_ms,   // time_boot_ms
+        _instance + 1,      // camera device id
+        _region_temperature.top_left.x / float(AP_MOUNT_SIYI_THERM_WIDTH - 1),
+        _region_temperature.top_left.y / float(AP_MOUNT_SIYI_THERM_HEIGHT - 1),
+        _region_temperature.bottom_right.x / float(AP_MOUNT_SIYI_THERM_WIDTH - 1),
+        _region_temperature.bottom_right.y / float(AP_MOUNT_SIYI_THERM_HEIGHT - 1),
+        _region_temperature.max_C,     // max in degC
+        _region_temperature.max_pos.x / float(AP_MOUNT_SIYI_THERM_WIDTH - 1),
+        _region_temperature.max_pos.y / float(AP_MOUNT_SIYI_THERM_HEIGHT - 1),
+        _region_temperature.min_C,     // min in degC
+        _region_temperature.min_pos.x / float(AP_MOUNT_SIYI_THERM_WIDTH - 1),
+        _region_temperature.min_pos.y / float(AP_MOUNT_SIYI_THERM_HEIGHT - 1));
+    _mavlink_resend_uart(chan, &msg);
 }
 #endif
 
@@ -1400,6 +1506,54 @@ void AP_Mount_Siyi::request_thermal_minmax()
         send_1byte_packet(SiyiCommandId::GET_TEMP_FULL_IMAGE, 2);
         _thermal.last_req_ms = now_ms;
     }
+}
+
+// ZT30 SDK: 0x12： Get Temperature of Selected Point
+// the sdk matches zt6 too, and the thermal resolution as well.
+bool AP_Mount_Siyi::request_point_temperature(const Vector2f& point)
+{
+    if (_hardware_model != HardwareModel::ZT6 &&
+        _hardware_model != HardwareModel::ZT30) {
+        return false;
+    }
+
+    struct __attribute__((packed)) {
+        uint16_t x;
+        uint16_t y;
+        uint8_t get_temp_flag;
+    } point_temp_req;
+
+    point_temp_req.x = point.x * (AP_MOUNT_SIYI_THERM_WIDTH - 1);
+    point_temp_req.y = point.y * (AP_MOUNT_SIYI_THERM_HEIGHT - 1);
+    point_temp_req.get_temp_flag = 1;   // measure once
+
+    return send_packet(SiyiCommandId::GET_TEMP_POINT, (const uint8_t *)&point_temp_req, sizeof(point_temp_req));
+}
+
+// ZT30 SDK: 0x13：Regional Temperature Measurement
+// ZT6 also same as ZT30 sdk.(I checked)
+bool AP_Mount_Siyi::request_region_temperature(const Vector2f& top_left, const Vector2f& bottom_right)
+{
+    if (_hardware_model != HardwareModel::ZT6 &&
+        _hardware_model != HardwareModel::ZT30) {
+        return false;
+    }
+
+    struct __attribute__((packed)) {
+        uint16_t start_x;
+        uint16_t start_y;
+        uint16_t end_x;
+        uint16_t end_y;
+        uint8_t get_temp_flag;
+    } region_temp_req;
+
+    region_temp_req.start_x = top_left.x * (AP_MOUNT_SIYI_THERM_WIDTH - 1);
+    region_temp_req.start_y = top_left.y * (AP_MOUNT_SIYI_THERM_HEIGHT - 1);
+    region_temp_req.end_x = bottom_right.x * (AP_MOUNT_SIYI_THERM_WIDTH - 1);
+    region_temp_req.end_y = bottom_right.y * (AP_MOUNT_SIYI_THERM_HEIGHT - 1);
+    region_temp_req.get_temp_flag = 1;  // measure once
+
+    return send_packet(SiyiCommandId::GET_TEMP_REGION, (const uint8_t *)&region_temp_req, sizeof(region_temp_req));
 }
 #endif
 
