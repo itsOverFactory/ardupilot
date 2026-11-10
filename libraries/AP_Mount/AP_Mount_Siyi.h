@@ -91,6 +91,20 @@ public:
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS
     void send_camera_thermal_range(mavlink_channel_t chan) const override;
+    void send_camera_thermal_range(mavlink_channel_t chan, uint8_t source_compid) const override;
+
+    bool request_point_temperature(const Vector2f& point) override;
+    bool request_region_temperature(const Vector2f& top_left, const Vector2f& bottom_right) override;
+
+    // Point(X,Y)
+    void send_camera_point_temperature(mavlink_channel_t chan) const override;
+    void send_camera_point_temperature(mavlink_channel_t chan, uint8_t source_compid) const override;
+
+    // A rectangular region
+    // Top left X,Y
+    // Bottom right X,Y
+    void send_camera_region_temperature(mavlink_channel_t chan) const override;
+    void send_camera_region_temperature(mavlink_channel_t chan, uint8_t source_compid) const override;
 #endif
 
     // change camera settings not normally used by autopilot
@@ -144,6 +158,8 @@ private:
         ACQUIRE_GIMBAL_ATTITUDE = 0x0D,
         ABSOLUTE_ZOOM = 0x0F,
         SET_CAMERA_IMAGE_TYPE = 0x11,
+        GET_TEMP_POINT = 0x12,
+        GET_TEMP_REGION = 0x13,
         GET_TEMP_FULL_IMAGE = 0x14,
         READ_RANGEFINDER = 0x15,
         SET_THERMAL_PALETTE = 0x1B,
@@ -400,6 +416,25 @@ private:
         Vector2ui max_pos;          // thermal max temp position on image in pixels. x=0 is left, y=0 is top
         Vector2ui min_pos;          // thermal min temp position on image in pixels. x=0 is left, y=0 is top
     } _thermal;
+
+    //  Temperature of Selected Point
+    struct {
+        uint32_t last_update_ms;
+        float temp_C;
+        Vector2ui pos;
+    } _point_temperature;
+
+    // Regional Temperature Measurement
+    struct {
+        uint32_t last_update_ms;
+        Vector2ui top_left;
+        Vector2ui bottom_right;
+        float max_C;
+        float min_C;
+        Vector2ui max_pos;
+        Vector2ui min_pos;
+    } _region_temperature;
+
 #endif
 
     // count of SET_TIME packets, we send 5 times to cope with packet loss

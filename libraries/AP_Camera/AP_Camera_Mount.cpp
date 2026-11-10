@@ -144,6 +144,56 @@ void AP_Camera_Mount::send_camera_thermal_range(mavlink_channel_t chan) const
     }
 #endif
 }
+
+void AP_Camera_Mount::send_camera_thermal_range(mavlink_channel_t chan, uint8_t source_compid) const
+{
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        mount->send_camera_thermal_range(get_mount_instance(), chan, source_compid);
+    }
+#endif
+}
+
+void AP_Camera_Mount::send_camera_point_temperature(mavlink_channel_t chan) const
+{
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        mount->send_camera_point_temperature(get_mount_instance(), chan);
+    }
+#endif
+}
+
+void AP_Camera_Mount::send_camera_point_temperature(mavlink_channel_t chan, uint8_t source_compid) const
+{
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        mount->send_camera_point_temperature(get_mount_instance(), chan, source_compid);
+    }
+#endif
+}
+
+void AP_Camera_Mount::send_camera_region_temperature(mavlink_channel_t chan) const
+{
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        mount->send_camera_region_temperature(get_mount_instance(), chan);
+    }
+#endif
+}
+
+void AP_Camera_Mount::send_camera_region_temperature(mavlink_channel_t chan, uint8_t source_compid) const
+{
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        mount->send_camera_region_temperature(get_mount_instance(), chan, source_compid);
+    }
+#endif
+}
 #endif // AP_CAMERA_SEND_THERMAL_RANGE_ENABLED
 
 #if AP_CAMERA_SCRIPTING_ENABLED

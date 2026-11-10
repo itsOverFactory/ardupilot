@@ -258,6 +258,10 @@ private:
 #if AP_CAMERA_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS
     void send_camera_thermal_range(mavlink_channel_t chan);
+    // send to gcs
+    void send_camera_point_temperature(mavlink_channel_t chan);
+    // send to gcs
+    void send_camera_region_temperature(mavlink_channel_t chan);
 #endif
 
     HAL_Semaphore _rsem;                // semaphore for multi-thread access

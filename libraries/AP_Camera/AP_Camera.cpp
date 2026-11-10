@@ -470,6 +470,14 @@ bool AP_Camera::send_mavlink_message(GCS_MAVLINK &link, const enum ap_message ms
         CHECK_PAYLOAD_SIZE2(CAMERA_THERMAL_RANGE);
         send_camera_thermal_range(chan);
         break;
+    case MSG_CAMERA_POINT_TEMPERATURE:
+        CHECK_PAYLOAD_SIZE2(CAMERA_POINT_TEMPERATURE);
+        send_camera_point_temperature(chan);
+        break;
+    case MSG_CAMERA_REGION_TEMPERATURE:
+        CHECK_PAYLOAD_SIZE2(CAMERA_REGION_TEMPERATURE);
+        send_camera_region_temperature(chan);
+        break;
 #endif
 #if AP_MAVLINK_MSG_VIDEO_STREAM_INFORMATION_ENABLED
     case MSG_VIDEO_STREAM_INFORMATION:
@@ -700,7 +708,45 @@ void AP_Camera::send_camera_thermal_range(mavlink_channel_t chan)
     // call each instance
     for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
         if (_backends[instance] != nullptr) {
-            _backends[instance]->send_camera_thermal_range(chan);
+            if (_backends[instance]->uses_source_compid()) {
+                _backends[instance]->send_camera_thermal_range(chan, camera_compid_for_instance(instance));
+            } else {
+                _backends[instance]->send_camera_thermal_range(chan);
+            }
+        }
+    }
+}
+
+// send camera point temperature message to GCS
+void AP_Camera::send_camera_point_temperature(mavlink_channel_t chan)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    // call each instance
+    for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            if (_backends[instance]->uses_source_compid()) {
+                _backends[instance]->send_camera_point_temperature(chan, camera_compid_for_instance(instance));
+            } else {
+                _backends[instance]->send_camera_point_temperature(chan);
+            }
+        }
+    }
+}
+
+// send camera region temperature message to GCS
+void AP_Camera::send_camera_region_temperature(mavlink_channel_t chan)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    // call each instance
+    for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            if (_backends[instance]->uses_source_compid()) {
+                _backends[instance]->send_camera_region_temperature(chan, camera_compid_for_instance(instance));
+            } else {
+                _backends[instance]->send_camera_region_temperature(chan);
+            }
         }
     }
 }
