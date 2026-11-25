@@ -340,6 +340,44 @@ MAV_RESULT AP_Mount::handle_command_do_mount_control(const mavlink_command_int_t
     return backend->handle_command_do_mount_control(packet);
 }
 
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+MAV_RESULT AP_Mount::handle_command_point_temperature(const mavlink_command_int_t &packet)
+{
+    auto *backend = get_primary();
+    if (backend == nullptr) {
+        return MAV_RESULT_FAILED;
+    }
+
+    const Vector2f point{packet.param1, packet.param2};
+    if (point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) {
+        return MAV_RESULT_DENIED;
+    }
+
+    return backend->request_point_temperature(point) ? MAV_RESULT_ACCEPTED : MAV_RESULT_UNSUPPORTED;
+}
+
+
+// A rectangular region
+// Top left X,Y
+// Bottom right X,Y
+MAV_RESULT AP_Mount::handle_command_region_temperature(const mavlink_command_int_t &packet)
+{
+    auto *backend = get_primary();
+    if (backend == nullptr) {
+        return MAV_RESULT_FAILED;
+    }
+
+    const Vector2f top_left{packet.param1, packet.param2};
+    const Vector2f bottom_right{packet.param3, packet.param4};
+    if (top_left.x < 0 || top_left.y < 0 || bottom_right.x > 1 || bottom_right.y > 1 ||
+        top_left.x >= bottom_right.x || top_left.y >= bottom_right.y) {
+        return MAV_RESULT_DENIED;
+    }
+
+    return backend->request_region_temperature(top_left, bottom_right) ? MAV_RESULT_ACCEPTED : MAV_RESULT_UNSUPPORTED;
+}
+#endif
+
 MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet)
 {
     AP_Mount_Backend *backend;
@@ -560,6 +598,12 @@ MAV_RESULT AP_Mount::handle_command(const mavlink_command_int_t &packet, const m
         return handle_command_do_gimbal_manager_configure(packet, msg);
     case MAV_CMD_DO_SET_ROI_SYSID:
         return handle_command_do_set_roi_sysid(packet);
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+    case MAV_CMD_CAMERA_POINT_TEMPERATURE:
+        return handle_command_point_temperature(packet);
+    case MAV_CMD_CAMERA_REGION_TEMPERATURE:
+        return handle_command_region_temperature(packet);
+#endif
     default:
         return MAV_RESULT_UNSUPPORTED;
     }
@@ -959,6 +1003,51 @@ void AP_Mount::send_camera_thermal_range(uint8_t instance, mavlink_channel_t cha
         return;
     }
     backend->send_camera_thermal_range(chan);
+}
+
+void AP_Mount::send_camera_thermal_range(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+    backend->send_camera_thermal_range(chan, source_compid);
+}
+
+void AP_Mount::send_camera_point_temperature(uint8_t instance, mavlink_channel_t chan) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+    backend->send_camera_point_temperature(chan);
+}
+
+void AP_Mount::send_camera_point_temperature(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+    backend->send_camera_point_temperature(chan, source_compid);
+}
+
+void AP_Mount::send_camera_region_temperature(uint8_t instance, mavlink_channel_t chan) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+    backend->send_camera_region_temperature(chan);
+}
+
+void AP_Mount::send_camera_region_temperature(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+    backend->send_camera_region_temperature(chan, source_compid);
 }
 #endif
 

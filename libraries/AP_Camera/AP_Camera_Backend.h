@@ -151,6 +151,21 @@ public:
 #if AP_CAMERA_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS
     virtual void send_camera_thermal_range(mavlink_channel_t chan) const {};
+    virtual void send_camera_thermal_range(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_thermal_range(chan);
+    }
+
+    // send camera point temperature message to GCS
+    virtual void send_camera_point_temperature(mavlink_channel_t chan) const {};
+    virtual void send_camera_point_temperature(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_point_temperature(chan);
+    }
+
+    // send camera region temperature message to GCS
+    virtual void send_camera_region_temperature(mavlink_channel_t chan) const {};
+    virtual void send_camera_region_temperature(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_region_temperature(chan);
+    }
 #endif
 
 #if AP_CAMERA_SCRIPTING_ENABLED

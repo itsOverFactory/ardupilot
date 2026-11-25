@@ -287,6 +287,15 @@ public:
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal range message to GCS
     void send_camera_thermal_range(uint8_t instance, mavlink_channel_t chan) const;
+    void send_camera_thermal_range(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const;
+
+    // send camera point temperature message to GCS
+    void send_camera_point_temperature(uint8_t instance, mavlink_channel_t chan) const;
+    void send_camera_point_temperature(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const;
+
+    // send camera region temperature message to GCS
+    void send_camera_region_temperature(uint8_t instance, mavlink_channel_t chan) const;
+    void send_camera_region_temperature(uint8_t instance, mavlink_channel_t chan, uint8_t source_compid) const;
 #endif
 
     // change camera settings not normally used by autopilot
@@ -340,6 +349,10 @@ private:
 
     MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet);
     MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet);
+#if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
+    MAV_RESULT handle_command_point_temperature(const mavlink_command_int_t &packet);
+    MAV_RESULT handle_command_region_temperature(const mavlink_command_int_t &packet);
+#endif
     MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet);
     MAV_RESULT handle_command_do_gimbal_manager_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
     void handle_gimbal_manager_set_attitude(const mavlink_message_t &msg);

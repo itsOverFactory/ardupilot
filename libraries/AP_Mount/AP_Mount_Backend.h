@@ -210,6 +210,22 @@ public:
 #if AP_MOUNT_SEND_THERMAL_RANGE_ENABLED
     // send camera thermal status message to GCS
     virtual void send_camera_thermal_range(mavlink_channel_t chan) const {}
+    virtual void send_camera_thermal_range(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_thermal_range(chan);
+    }
+    virtual bool request_point_temperature(const Vector2f& point) { return false; }
+    virtual bool request_region_temperature(const Vector2f& top_left, const Vector2f& bottom_right) { return false; }
+
+    // send to gcs
+    virtual void send_camera_point_temperature(mavlink_channel_t chan) const {}
+    virtual void send_camera_point_temperature(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_point_temperature(chan);
+    }
+    // send to gcs
+    virtual void send_camera_region_temperature(mavlink_channel_t chan) const {}
+    virtual void send_camera_region_temperature(mavlink_channel_t chan, uint8_t source_compid) const {
+        send_camera_region_temperature(chan);
+    }
 #endif
 
     // change camera settings not normally used by autopilot
